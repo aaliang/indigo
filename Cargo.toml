@@ -1,0 +1,7 @@
+[package]
+name = "indigo"
+version = "0.1.0"
+authors = ["Andy Liang <aliang2344@gmail.com>"]
+
+[dependencies]
+futures = "0.1.6"
