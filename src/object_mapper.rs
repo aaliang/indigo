@@ -2,17 +2,17 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::io::{BufReader, Error, Lines};
 
-pub trait MapTrait<A> {
+pub trait MapBecome<A> {
     fn calc(&self, s: &str) -> A;
 }
 
 pub struct ObjectMapper<A> {
     lines: Lines<BufReader<File>>,
-    mapper: Box<MapTrait<A>>
+    mapper: Box<MapBecome<A>>
 }
 
 impl <A> ObjectMapper<A> {
-    pub fn new<'a, M> (path: &'a str, mapper: M) -> Result<ObjectMapper<A>, Error> where M: 'static + MapTrait<A> {
+    pub fn new<'a, M> (path: &'a str, mapper: M) -> Result<ObjectMapper<A>, Error> where M: 'static + MapBecome<A> {
         let fd = try!(File::open(path));
         let file = BufReader::new(fd);
         Ok(ObjectMapper {
@@ -23,7 +23,7 @@ impl <A> ObjectMapper<A> {
 }
 
 // support passing a closure too - doesn't quite work yet
-impl <A, C> MapTrait<A> for Box<C> where C: Fn(&str) -> A {
+impl <A, C> MapBecome<A> for Box<C> where C: Fn(&str) -> A {
     fn calc(&self, s: &str) -> A {
         (self)(s)
     }
