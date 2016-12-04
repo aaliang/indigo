@@ -29,7 +29,6 @@ impl <A, C> MapBecome<A> for Box<C> where C: Fn(&str) -> A {
     }
 }
 
-
 impl <A> Iterator for ObjectMapper<A> {
     type Item = A;
     fn next(&mut self) -> Option<A> {
@@ -37,4 +36,3 @@ impl <A> Iterator for ObjectMapper<A> {
         line.map(|l| self.mapper.calc(&l.unwrap()))
     }
 }
-
