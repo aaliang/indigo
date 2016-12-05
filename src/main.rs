@@ -1,22 +1,24 @@
 extern crate indigo;
 
-use indigo::object_mapper::{ObjectMapper};
-use indigo::events::history::{EventSim, NameHint};
+use indigo::events::stream::VectorStream;
+use indigo::events::name_hint::NameHint;
 
 fn main() {
-    let fr = ObjectMapper::new(
-        "/home/andy/dev/indigo/d60bcc93-f0b9-11e2-b49c-002590d151de.2016-11-27T00:00:00.000Z,2016-11-28T00:00:00.000Z.groups",
-        EventSim {});
-    let ns = NameHint::from("/home/andy/dev/indigo/d60bcc93-f0b9-11e2-b49c-002590d151de.2016-11-27T00:00:00.000Z,2016-11-28T00:00:00.000Z.eventNames");
 
-//    println!("{:?}", ns);
+//    let hint = NameHint::ld_string("/home/andy/dev/indigo/d60bcc93-f0b9-11e2-b49c-002590d151de.2016-11-27T00:00:00.000Z,2016-11-28T00:00:00.000Z.eventNames").unwrap();
+//
+//    EventStream::from(&hint, "/home/andy/dev/indigo/d60bcc93-f0b9-11e2-b49c-002590d151de.2016-11-27T00:00:00.000Z,2016-11-28T00:00:00.000Z.groups");
 
-    match fr {
-        Ok(lr) => {
-            for n in lr {
-//                println!("{:?}", n);
-            }
-        },
-        Err(e) => println!("no, {:?}", e)
+    let name_path = "/home/andy/dev/indigo/d60bcc93-f0b9-11e2-b49c-002590d151de.2016-11-27T00:00:00.000Z,2016-11-28T00:00:00.000Z.eventNames";
+
+    let hint: String = NameHint::ld_string(name_path).unwrap();
+
+    let stream = VectorStream::from(
+        &hint,
+        "/home/andy/dev/indigo/d60bcc93-f0b9-11e2-b49c-002590d151de.2016-11-27T00:00:00.000Z,2016-11-28T00:00:00.000Z.groups");
+
+    for i in stream {
+//        println!("{:?}", i);
     }
+
 }

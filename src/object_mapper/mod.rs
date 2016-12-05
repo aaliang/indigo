@@ -2,6 +2,10 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::io::{BufReader, Error, Lines};
 
+/// while this seemed like a promising abstraction, this is considered unused in favor of
+/// VectorStream in stream.rs
+/// perhaps this will be useful again -- Dec 05, 2016
+
 pub trait MapBecome<A> {
     fn calc(&self, s: &str) -> A;
 }

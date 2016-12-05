@@ -5,3 +5,4 @@ authors = ["Andy Liang <aliang2344@gmail.com>"]
 
 [dependencies]
 futures = "0.1.6"
+time = "*"
