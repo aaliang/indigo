@@ -1,19 +1,61 @@
 extern crate indigo;
+extern crate getopts;
 
+use getopts::Options;
 use indigo::events::stream::VectorStream;
 use indigo::events::name_hint::NameHint;
-use indigo::events::history::History;
+use indigo::events::groups::GroupPipeline;
+
+use std::env;
+
+struct CommandParameters {
+    group_path: String,
+    names_path: String
+}
+
+fn get_args(args: Vec<String>) -> Result<CommandParameters, i32> {
+    let mut opts = Options::new();
+
+    opts.optflagopt("g", "group", "path to group file", "PATH_TO_GROUP_FILE");
+    opts.optflagopt("n", "name", "path to names file", "PATH_TO_NAMES_FILE");
+
+    let matches = match opts.parse(&args[1..]) {
+        Ok(m) => m,
+        Err(failure) => panic!(failure.to_string())
+    };
+
+    let names_path = try!(matches.opt_str("n").ok_or(1));
+    let group_path = try!(matches.opt_str("g").ok_or(2));
+
+    Ok(CommandParameters {
+        group_path: group_path,
+        names_path: names_path
+    })
+}
+
+fn print_usage() {
+    println!("indigo -n /path/to/names -g /path/to/groups");
+}
 
 fn main() {
 
-    let name_path = "/home/andy/dev/indigo/d60bcc93-f0b9-11e2-b49c-002590d151de.2016-11-27T00:00:00.000Z,2016-11-28T00:00:00.000Z.eventNames";
+    let mut opts = Options::new();
 
-    let hint: String = NameHint::ld_string(name_path).unwrap();
+    opts.optflagopt("g", "group", "path to group file", "PATH_TO_GROUP_FILE");
+    opts.optflagopt("n", "name", "path to names file", "PATH_TO_NAMES_FILE");
 
-    let stream = VectorStream::from(
-        &hint,
-        "/home/andy/dev/indigo/d60bcc93-f0b9-11e2-b49c-002590d151de.2016-11-27T00:00:00.000Z,2016-11-28T00:00:00.000Z.groups");
+    match get_args(env::args().collect()) {
+        Ok(parameters) => {
+            let hint: String = NameHint::ld_string(&parameters.names_path).unwrap();
+            let stream = VectorStream::from(
+                &hint,
+                &parameters.group_path);
 
-    let hist = History::new(stream, 10, 5);
-    hist.mine();
+            let hist = GroupPipeline::new(stream, 10, 5);
+            hist.mine();
+        }
+        Err(_) => print_usage()
+    }
+
+
 }

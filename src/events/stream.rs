@@ -26,9 +26,10 @@ impl <'a> Iterator for VectorStream<'a> {
     fn next(&mut self) -> Option<Vec<usize>> {
         let line_opt = self.lines.next();
         line_opt.map(|line| {
-            let l: String = line.unwrap();
-            let v: Vec<usize> = l.split(",").map(|name| self.i_view.translate(name).unwrap().to_owned()).collect();
-            v
+            line.unwrap()
+                .split(",")
+                .map(|name| self.i_view.translate(name).unwrap().to_owned())
+                .collect()
         })
     }
 }
