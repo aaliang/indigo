@@ -13,7 +13,6 @@ impl <'a> VectorStream<'a> {
         let file = BufReader::new(fd);
 
         VectorStream {
-            //lines: file.lines(),
             reader: file,
             i_view: hint_view.unwrap()
         }
@@ -24,7 +23,7 @@ impl <'a> VectorStream<'a> {
         try!(self.reader.read_exact(&mut into));
         let group_size = as_u32_be(&into);
         let mut returned_vector = Vec::with_capacity(group_size as usize);
-        for _ in group_size..1 {
+        for _ in 1..group_size {
             try!(self.reader.read_exact(&mut into));
             returned_vector.push(as_u32_be(&into));
         }
@@ -32,12 +31,18 @@ impl <'a> VectorStream<'a> {
     }
 
     pub fn get_next(&mut self) -> Option<Vec<u32>> {
-        self.try_get().ok()
+        //self.try_get().ok()
+        match self.try_get() {
+            Err(e) => {
+                println!("{:?}", e);
+                None
+            },
+            Ok(d) => Some(d)
+        }
     }
 }
 
 pub struct VectorStream<'a> {
-    //lines: Lines<BufReader<File>>,
     reader: BufReader<File>,
     i_view: NamedIndexView<'a>
 }
