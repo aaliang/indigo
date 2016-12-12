@@ -10,26 +10,29 @@ impl <'a> VectorStream<'a> {
         let file = BufReader::new(fd);
 
         VectorStream {
-            lines: file.lines(),
+            //lines: file.lines(),
+            reader: file,
             i_view: hint_view.unwrap()
         }
     }
 }
 
 pub struct VectorStream<'a> {
-    lines: Lines<BufReader<File>>,
+    //lines: Lines<BufReader<File>>,
+    reader: BufReader<File>,
     i_view: NamedIndexView<'a>
 }
 
 impl <'a> Iterator for VectorStream<'a> {
     type Item = Vec<usize>;
     fn next(&mut self) -> Option<Vec<usize>> {
-        let line_opt = self.lines.next();
-        line_opt.map(|line| {
-            line.unwrap()
-                .split(",")
-                .map(|name| self.i_view.translate(name).unwrap().to_owned())
-                .collect()
-        })
+        
+        //let line_opt = self.lines.next();
+        //line_opt.map(|line| {
+            //line.unwrap()
+                //.split(",")
+                //.map(|name| self.i_view.translate(name).unwrap().to_owned())
+                //.collect()
+        //})
     }
 }

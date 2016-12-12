@@ -2,7 +2,7 @@ extern crate indigo;
 extern crate getopts;
 
 use getopts::Options;
-use indigo::events::stream::VectorStream;
+use indigo::events::VectorStream;
 use indigo::events::name_hint::NameHint;
 use indigo::events::groups::GroupPipeline;
 
@@ -34,7 +34,7 @@ fn get_args(args: Vec<String>) -> Result<CommandParameters, i32> {
 }
 
 fn print_usage() {
-    println!("indigo -n /path/to/names -g /path/to/groups");
+    println!("usage: indigo -n /path/to/names -g /path/to/groups");
 }
 
 fn main() {
