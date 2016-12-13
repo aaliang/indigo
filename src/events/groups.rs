@@ -1,10 +1,6 @@
-use object_mapper::MapBecome;
 use events::VectorStream;
-
-use view::VecView;
 use std::fmt::Debug;
-
-use events::name_hint::NamedIndexView;
+use std::collections::LinkedList;
 
 impl <'a> GroupPipeline <'a> {
 
@@ -18,15 +14,14 @@ impl <'a> GroupPipeline <'a> {
 
     pub fn mine (self) {
         for view in self.stream.take(10) {
-            println!("{:?}", view);
             if view.len() <= self.window_size {
-                println!("in here");
                 let init = Self::sub_sequences(&view[..], &self.max_to_get);
             } else {
                 let mut windows = view.windows(self.window_size);
                 match windows.next() {
                     Some(first_frame) => {
                         let init = Self::sub_sequences(first_frame, &self.max_to_get);
+                        println!("{:?}", init);
                         for window in windows {
                             //                println!("{:?}", window);
                             //                Self::sub_sequences(window, &self.max_to_get);
@@ -38,29 +33,26 @@ impl <'a> GroupPipeline <'a> {
         }
     }
 
-    pub fn sub_sequences<A>(window: &[A], max_to_get: &usize) -> Vec<Vec<Vec<A>>> where A: Copy + Debug {
-        let mut vector: Vec<Vec<Vec<A>>> = Vec::with_capacity(window.len());
-
-        //unsafe {vector.set_len(window.len())};
-
-        for (vec_len, element) in window.iter().enumerate().rev() {
-            let mut v:Vec<Vec<A>> = Vec::new();
+    pub fn sub_sequences<A>(window: &[A], max_to_get: &usize) -> LinkedList<Vec<Vec<A>>> where A: Copy + Debug {
+        //let mut window_state_list: Vec<Vec<Vec<A>>> = Vec::with_capacity(window.len());
+        let mut window_state_list: LinkedList<Vec<Vec<A>>> = LinkedList::new();
+        for element in window.iter().rev() {
             let mut new_entry = {
-                vector.iter()
+                window_state_list.iter()
                     .flat_map(|x| x.to_owned())
-                    .map(|mut vector| {
-                        if &vector.len() < max_to_get {
-                            vector.insert(0, *element);
+                    .map(|mut window_state_list| {
+                        if &window_state_list.len() < max_to_get {
+                            window_state_list.insert(0, *element);
                         }
-                        vector
+                        window_state_list
                     })
                     .collect::<Vec<Vec<A>>>()
             };
             let singleton_el = vec![*element];
-            new_entry.push(vec![*element]);
-            vector.push(new_entry);
+            new_entry.push(singleton_el);
+            window_state_list.push_back(new_entry);
         }
-        vector
+        window_state_list
     }
 }
 

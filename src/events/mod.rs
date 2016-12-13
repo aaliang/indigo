@@ -3,7 +3,7 @@ pub mod name_hint;
 
 use events::name_hint::NamedIndexView;
 use std::fs::File;
-use std::io::{BufReader, BufRead, Lines, Read, Error};
+use std::io::{BufReader, Read, Error};
 
 impl <'a> VectorStream<'a> {
 
@@ -53,13 +53,13 @@ fn as_u32_be(array: &[u8; 4]) -> u32 {
     ((array[2] as u32) <<  8) |
     ((array[3] as u32) <<  0)
 }
-
+/*
 fn as_u32_le(array: &[u8; 4]) -> u32 {
     ((array[0] as u32) <<  0) |
     ((array[1] as u32) <<  8) |
     ((array[2] as u32) << 16) |
     ((array[3] as u32) << 24)
-}
+}*/
 
 impl <'a> Iterator for VectorStream<'a> {
     type Item = Vec<u32>;
