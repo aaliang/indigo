@@ -1,13 +1,14 @@
-#![feature(test)]
+//#![feature(test)]
 
 pub mod object_mapper;
 pub mod events;
 pub mod collector;
 pub mod view;
+pub mod external_sort;
 
 extern crate time;
 extern crate getopts;
-extern crate test;
+//extern crate test;
 
 #[cfg(test)]
 mod tests {

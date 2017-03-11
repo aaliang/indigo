@@ -7,7 +7,7 @@ use std::io::{BufReader, Error, Lines};
 /// perhaps this will be useful again -- Dec 05, 2016
 
 pub trait MapBecome<A> {
-    fn calc(&self, s: &str) -> A;
+    fn becomes(&self, s: &str) -> A;
 }
 
 pub struct ObjectMapper<A> {
@@ -28,7 +28,7 @@ impl <A> ObjectMapper<A> {
 
 // support passing a closure too - doesn't quite work yet
 impl <A, C> MapBecome<A> for Box<C> where C: Fn(&str) -> A {
-    fn calc(&self, s: &str) -> A {
+    fn becomes(&self, s: &str) -> A {
         (self)(s)
     }
 }
@@ -37,6 +37,6 @@ impl <A> Iterator for ObjectMapper<A> {
     type Item = A;
     fn next(&mut self) -> Option<A> {
         let line = self.lines.next();
-        line.map(|l| self.mapper.calc(&l.unwrap()))
+        line.map(|l| self.mapper.becomes(&l.unwrap()))
     }
 }

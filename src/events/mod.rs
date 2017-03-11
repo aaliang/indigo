@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod groups;
 pub mod name_hint;
 
@@ -33,8 +35,7 @@ impl <'a> VectorStream<'a> {
     pub fn get_next(&mut self) -> Option<Vec<u32>> {
         //self.try_get().ok()
         match self.try_get() {
-            Err(e) => {
-                println!("{:?}", e);
+            Err(_) => {
                 None
             },
             Ok(d) => Some(d)
@@ -53,6 +54,7 @@ fn as_u32_be(array: &[u8; 4]) -> u32 {
     ((array[2] as u32) <<  8) |
     ((array[3] as u32) <<  0)
 }
+
 /*
 fn as_u32_le(array: &[u8; 4]) -> u32 {
     ((array[0] as u32) <<  0) |
