@@ -78,7 +78,8 @@ pub struct SortMe;
 
 impl SortMe {
     fn sort<I, F>(to_sort: Box<Iterator<Item=I>>, options: SortOptions, chunk_sort: F, merge_sort: F)
-        where I: Serializable, F: Fn(&I, &I) -> Ordering + 'static {
+        where I: Serializable + Clone,
+              F: Fn(&I, &I) -> Ordering + 'static {
         use std::io::{BufRead, BufReader};
         use std::io::Lines;
 
@@ -103,12 +104,13 @@ impl SortMe {
                 }
             });
 
-//        match i_head_max {
-//            None => None,
-//            Some(thing) => {
-//                thing.advance()
-//            }
-//        };
+        match i_head_max {
+            None => None,
+            Some(thing) => {
+                let emit_me = thing.advance();
+                emit_me
+            }
+        };
     }
 }
 
@@ -119,7 +121,7 @@ struct IHead<I> {
 
 
 //TODO: need to use Cell or I needs to be Clone
-impl <I> IHead<I> {
+impl <I> IHead<I> where I: Clone {
     fn new<A>(mut iterator: A) -> IHead<I> where A: Iterator<Item=I> + 'static {
         let head = iterator.next();
 
@@ -128,8 +130,13 @@ impl <I> IHead<I> {
             head: head
         }
     }
-    fn advance(&mut self) {
+    fn advance(&mut self) -> Option<I> {
+        let head = match self.head {
+            Some(ref e) => Some(e.to_owned()),
+            None => None
+        };
         self.head = self.iterator.next();
+        head
     }
 }
 
