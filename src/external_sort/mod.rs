@@ -36,7 +36,8 @@ struct FileIterator<I> {
 }
 
 impl <I> FileIterator<I> {
-    fn new<F>(inner: Box<Iterator<Item=I>>, options: SortOptions, sort_fn: F) -> FileIterator<I> where F: Fn(&I, &I) -> Ordering + 'static {
+    fn new<F>(inner: Box<Iterator<Item=I>>, options: SortOptions, sort_fn: F) -> FileIterator<I>
+        where F: Fn(&I, &I) -> Ordering + 'static {
         FileIterator {
             inner: inner,
             options: options,
@@ -74,25 +75,40 @@ impl <I> Iterator for FileIterator<I> where I: Serializable {
     }
 }
 
-pub struct SortMe;
 
-impl SortMe {
-    fn sort<I, F>(to_sort: Box<Iterator<Item=I>>, options: SortOptions, chunk_sort: F, merge_sort: F)
-        where I: Serializable + Clone,
-              F: Fn(&I, &I) -> Ordering + 'static {
+
+pub struct ExternalSort<I: Clone> {
+    sorted_chunks: Vec<IHead<I>>,
+    sort_fn: Box<Fn(&I, &I) -> Ordering>
+}
+
+impl <I> ExternalSort<I> where I: Clone + Serializable {
+    fn new<F>(to_sort: Box<Iterator<Item=I>>, options: SortOptions, chunk_sort: F, merge_sort: F)
+        -> ExternalSort<I> where F: Fn(&I, &I) -> Ordering + 'static {
         use std::io::{BufRead, BufReader};
         use std::io::Lines;
 
         let files = FileIterator::new(to_sort, options, chunk_sort);
 
-        let mut my_vec = files.map(|file| {
+        let sorted_chunks = files.map(|file| {
             let p = BufReader::new(file)
                 .lines()
                 .map(|line| I::deserialize(line.unwrap().as_bytes()));
             IHead::new(p)
         }).collect::<Vec<_>>();
 
-        let i_head_max = my_vec.iter_mut()
+        ExternalSort {
+            sorted_chunks: sorted_chunks,
+            sort_fn: Box::new(merge_sort)
+        }
+    }
+}
+
+impl <I> Iterator for ExternalSort<I> where I: Clone {
+    type Item = I;
+    fn next(&mut self) -> Option<Self::Item> {
+        let ref sort_fn = self.sort_fn;
+        let head_max = self.sorted_chunks.iter_mut()
             .max_by(|a, b| {
                 let ref a_head = a.head;
                 let ref b_head = b.head;
@@ -100,17 +116,17 @@ impl SortMe {
                     (&None, &None) => Ordering::Equal,
                     (&Some(_), &None) => Ordering::Greater,
                     (&None, &Some(_)) => Ordering::Less,
-                    (&Some(ref _a), &Some(ref _b)) => (merge_sort)(_a, _b)
+                    (&Some(ref _a), &Some(ref _b)) => (sort_fn)(_a, _b)
                 }
             });
 
-        match i_head_max {
+        match head_max {
             None => None,
             Some(thing) => {
                 let emit_me = thing.advance();
                 emit_me
             }
-        };
+        }
     }
 }
 
@@ -119,8 +135,6 @@ struct IHead<I> {
     head: Option<I>
 }
 
-
-//TODO: need to use Cell or I needs to be Clone
 impl <I> IHead<I> where I: Clone {
     fn new<A>(mut iterator: A) -> IHead<I> where A: Iterator<Item=I> + 'static {
         let head = iterator.next();
