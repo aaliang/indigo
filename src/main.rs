@@ -38,7 +38,6 @@ fn print_usage() {
 }
 
 fn main() {
-
     let mut opts = Options::new();
 
     opts.optflagopt("g", "group", "path to group file", "PATH_TO_GROUP_FILE");
@@ -56,6 +55,4 @@ fn main() {
         }
         Err(_) => print_usage()
     }
-
-
 }
