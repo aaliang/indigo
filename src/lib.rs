@@ -13,14 +13,14 @@ extern crate getopts;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test::Bencher;
-    use events::groups::GroupPipeline;
-    
-    #[bench]
-    fn bench_sub_sequence(b: &mut Bencher) { 
-        
-        let vec: Vec<u32> = (0..5).collect();
-        println!("hello"); 
-        b.iter(||GroupPipeline::sub_sequences(&vec, &3));
-    }
+//    use test::Bencher;
+//    use events::groups::GroupPipeline;
+//
+//    #[bench]
+//    fn bench_sub_sequence(b: &mut Bencher) {
+//
+//        let vec: Vec<u32> = (0..5).collect();
+//        println!("hello");
+//        b.iter(||GroupPipeline::sub_sequences(&vec, &3));
+//    }
 }
