@@ -2,11 +2,42 @@
 #![allow(unused_imports)]
 
 use std::cmp::Ordering;
+use std::io::{Write, Read, Error};
 
-pub trait Serializable {
-    //TODO: could probably avoid an allocation altogether by passing a Write impl
-    fn serialize(&self) -> Vec<u8>;
-    fn deserialize(raw: &[u8]) -> Self;
+pub trait Deserialize: Sized {
+    fn deserialize(reader: &mut Read) -> Result<Option<Self>, Error>;
+}
+
+pub trait Serialize {
+    /// serializes self to the writer. resulting in the number of bytes written
+    fn serialize(&self, writer: &mut Write) -> Result<usize, Error>;
+}
+
+use std::marker::PhantomData;
+
+struct StreamDeserializer<I, R: Read + Sized> {
+    phantom: PhantomData<I>,
+    reader: R
+}
+
+impl <I, R: Read + Sized> StreamDeserializer<I, R> {
+    pub fn new(r: R) -> StreamDeserializer<I, R> {
+        StreamDeserializer {
+            phantom: PhantomData,
+            reader: r
+        }
+    }
+}
+
+impl <I, R: Read + Sized>Iterator for StreamDeserializer<I, R> where I: Deserialize {
+    type Item = I;
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = I::deserialize(&mut self.reader);
+        match result {
+            Err(_) => None,
+            Ok(item) => item
+        }
+    }
 }
 
 pub trait EventLike {
@@ -49,9 +80,10 @@ impl <'a, I> FileIterator<'a, I> {
 
 
 use std::path::{Path, PathBuf};
+use std::fmt::Debug;
 // iterating over open files seems dangerous maybe? if the iterator is unspooled into a collection
 // this could get messy.
-impl <'a, I> Iterator for FileIterator<'a, I> where I: Serializable {
+impl <'a, I> Iterator for FileIterator<'a, I> where I: Serialize + Debug {
     type Item = PathBuf; // path to file. it could just be string, but let's wrap it to make it more semantic
     fn next(&mut self) -> Option<Self::Item> {
         use std::io::Write;
@@ -66,9 +98,10 @@ impl <'a, I> Iterator for FileIterator<'a, I> where I: Serializable {
             let mut fd = File::create(&path).unwrap(); // TODO: error handling
             chunk.sort_by(|a, b| (self.sort_by)(a, b));
             // writing should probably be done in a sink thread
+
             for value in chunk {
-                fd.write_all(&value.serialize()).unwrap();
-                fd.write_all(b"\n").unwrap();
+//                println!("writing to {} [{:?}]", self.num, value);
+                value.serialize(&mut fd).unwrap();
             }
             self.num += 1;
             Some(PathBuf::from(path))
@@ -81,23 +114,19 @@ pub struct ExternalSort<I: Clone> {
     sort_fn: Box<Fn(&I, &I) -> Ordering>
 }
 
-impl <I> ExternalSort<I> where I: Clone + Serializable {
-    pub fn new<F>(to_sort: Box<Iterator<Item=I>>, options: SortOptions, chunk_sort: F)
-        -> ExternalSort<I>
-        where F: Fn(&I, &I) -> Ordering + 'static {
+impl <E> ExternalSort<E> where E: Clone + Serialize + Deserialize + Debug + 'static {
+    pub fn new<F>(to_sort: Box<Iterator<Item=E>>, options: SortOptions, chunk_sort: F)
+        -> ExternalSort<E>
+        where F: Fn(&E, &E) -> Ordering + 'static {
         use std::io::{BufRead, BufReader};
         use std::io::Lines;
 
         let sorted_chunks = {
             let paths = FileIterator::new(to_sort, options, &chunk_sort);
             paths.map(|file| {
-                let p = BufReader::new(File::open(file).unwrap())
-                    .split('\n' as u8) // this is dangerous as fuck. and incorrect. splitting is not the way to go
-                    .map(|line| {
-                        let l = line.unwrap();
-                        I::deserialize(&l)
-                    });
-                IHead::new(p)
+                let fd = BufReader::new(File::open(file).unwrap());
+                let ds = StreamDeserializer::new(fd);
+                IHead::new(ds)
             }).collect::<Vec<_>>()
         };
 
@@ -108,23 +137,23 @@ impl <I> ExternalSort<I> where I: Clone + Serializable {
     }
 }
 
-impl <I> Iterator for ExternalSort<I> where I: Clone {
+impl <I> Iterator for ExternalSort<I> where I: Clone + Debug {
     type Item = I;
     fn next(&mut self) -> Option<Self::Item> {
         let ref sort_fn = self.sort_fn;
-        let head_max = self.sorted_chunks.iter_mut()
-            .max_by(|a, b| {
+        let head_min = self.sorted_chunks.iter_mut()
+            .min_by(|a, b| {
                 let ref a_head = a.head;
                 let ref b_head = b.head;
                 match (a_head, b_head) {
                     (&None, &None) => Ordering::Equal,
-                    (&Some(_), &None) => Ordering::Greater,
-                    (&None, &Some(_)) => Ordering::Less,
+                    (&Some(_), &None) => Ordering::Less,
+                    (&None, &Some(_)) => Ordering::Greater,
                     (&Some(ref _a), &Some(ref _b)) => (sort_fn)(_a, _b)
                 }
             });
 
-        match head_max {
+        match head_min {
             None => None,
             Some(thing) => {
                 let emit_me = thing.advance();
@@ -139,7 +168,7 @@ struct IHead<I> {
     head: Option<I>
 }
 
-impl <I> IHead<I> where I: Clone {
+impl <I> IHead<I> where I: Clone + Debug {
     fn new<A>(mut iterator: A) -> IHead<I> where A: Iterator<Item=I> + 'static {
         let head = iterator.next();
         IHead {
@@ -159,22 +188,6 @@ impl <I> IHead<I> where I: Clone {
 
 #[test]
 fn test() {
-
-    impl Serializable for u32 {
-        fn serialize(&self) -> Vec<u8> {
-            let b1 = ((self >> 24u32) & 0xffu32) as u8;
-            let b2 = ((self >> 16u32) & 0xffu32) as u8;
-            let b3 = ((self >> 8u32) & 0xffu32) as u8;
-            let b4 = (self & 0xffu32) as u8;
-            vec![b1, b2, b3, b4]
-        }
-
-        fn deserialize(raw: &[u8]) -> Self {
-            unimplemented!()
-        }
-    }
-
-
     let boxed_seq: Box<Iterator<Item=u32>> = Box::new(1..1000);
 
     use std::fs;
@@ -186,37 +199,33 @@ fn test() {
         chunk_size: 100
     };
 
-    ExternalSort::new(boxed_seq, options, |a, b| Ordering::Equal);
-}
+    let es = ExternalSort::new(boxed_seq, options, |a, b| Ordering::Equal);
 
-// this is temporary shitcode to get around reconciling splitting on the bufreader
-impl Serializable for u32 {
-    fn serialize(&self) -> Vec<u8> {
-        let s = self.to_string();
-        s.as_bytes().to_owned()
-    }
-
-    fn deserialize(raw: &[u8]) -> Self {
-        let as_string = String::from_utf8_lossy(raw);
-        as_string.parse::<u32>().unwrap()
+    for i in es {
+        println!("{}", i);
     }
 }
 
-//impl Serializable for u32 {
-//    fn serialize(&self) -> Vec<u8> {
-//        let b1 = ((self >> 24u32) & 0xffu32) as u8;
-//        let b2 = ((self >> 16u32) & 0xffu32) as u8;
-//        let b3 = ((self >> 8u32) & 0xffu32) as u8;
-//        let b4 = (self & 0xffu32) as u8;
-//        vec![b1, b2, b3, b4]
-//    }
-//
-//    fn deserialize(raw: &[u8]) -> Self {
-//        let mut num: u32 = 0;
-//        num += raw[3] as u32;
-//        num += (raw[2] as u32) << 4;
-//        num += (raw[1] as u32) << 8;
-//        num += (raw[0] as u32) << 12;
-//        num
-//    }
-//}
+impl Deserialize for u32 {
+    fn deserialize (reader: &mut Read) -> Result<Option<Self>, Error> {
+        let mut buffer: [u8; 4] = [0; 4];
+        reader.read_exact(&mut buffer).map(|_| {
+            let mut num: u32 = 0;
+            num |= buffer[3] as u32;
+            num |= (buffer[2] as u32) << 8;
+            num |= (buffer[1] as u32) << 16;
+            num |= (buffer[0] as u32) << 24;
+            Some(num)
+        })
+    }
+}
+
+impl Serialize for u32 {
+    fn serialize (&self, writer: &mut Write) -> Result<usize, Error> {
+        let b1 = ((self >> 24u32) & 0xffu32) as u8;
+        let b2 = ((self >> 16u32) & 0xffu32) as u8;
+        let b3 = ((self >> 8u32) & 0xffu32) as u8;
+        let b4 = (self & 0xffu32) as u8;
+        writer.write_all(&[b1, b2, b3, b4]).map(|_| 4)
+    }
+}

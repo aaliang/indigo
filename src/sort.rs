@@ -7,7 +7,7 @@ use indigo::external_sort::{SortOptions, ExternalSort};
 use std::cmp::Ordering;
 
 fn main () {
-    let boxed_seq: Box<Iterator<Item=u32>> = Box::new(1..1000);
+    let boxed_seq: Box<Iterator<Item=u32>> = Box::new(0..1000);
 
     use std::fs;
 
@@ -18,5 +18,9 @@ fn main () {
         chunk_size: 100
     };
 
-    ExternalSort::new(boxed_seq, options, |a, b| Ordering::Equal);
+    let es = ExternalSort::new(boxed_seq, options, |a, b| Ordering::Equal);
+
+    for i in es {
+        println!("{}", i);
+    }
 }
