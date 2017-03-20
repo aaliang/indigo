@@ -2,15 +2,15 @@ use events::VectorStream;
 use std::fmt::Debug;
 use std::collections::LinkedList;
 
-pub struct GroupPipeline<'a> {
-    stream: VectorStream<'a>,
+pub struct GroupPipeline <E: Copy + Debug, I: Iterator<Item=Vec<E>> + Sized> {
+    stream: I,
     window_size: usize,
     max_to_get: usize
 }
 
-impl <'a> GroupPipeline <'a> {
+impl<E, I> GroupPipeline<E, I> where E: Copy + Debug, I: Iterator<Item=Vec<E>> + Sized {
 
-    pub fn new(stream: VectorStream<'a>, window_size: usize, max_positions: usize) -> GroupPipeline<'a> {
+    pub fn new(stream: I, window_size: usize, max_positions: usize) -> GroupPipeline<E, I> {
         GroupPipeline {
             stream: stream,
             window_size: window_size,
@@ -18,7 +18,7 @@ impl <'a> GroupPipeline <'a> {
         }
     }
 
-    fn produce<W, A: Copy + 'a>(iter: W) -> () where W: Iterator<Item=&'a mut Vec<Vec<A>>> {
+    fn produce<'a, W, A: Copy + 'a>(iter: W) -> () where W: Iterator<Item=&'a mut Vec<Vec<A>>> {
         for outer_vec in iter {
             for inner_vec in outer_vec.iter_mut() {
                 let _ = inner_vec.clone();
@@ -37,7 +37,7 @@ impl <'a> GroupPipeline <'a> {
 
 
                 for element in rest_elements {
-                    //println!("{:?}", element);
+                    println!("{:?}", element);
                     let _ = Self::produce(initial_seqs.iter_mut());
                     let _ = initial_seqs.push_back(vec![vec![*element]]);
                     let _ = initial_seqs.pop_front();
@@ -48,7 +48,6 @@ impl <'a> GroupPipeline <'a> {
     }
 
     pub fn sub_sequences<A>(window: &[A], max_to_get: &usize) -> LinkedList<Vec<Vec<A>>> where A: Copy + Debug {
-        //let mut window_state_list: Vec<Vec<Vec<A>>> = Vec::with_capacity(window.len());
         let mut window_state_list: LinkedList<Vec<Vec<A>>> = LinkedList::new();
         for element in window.iter().rev() {
             let mut new_entry = {

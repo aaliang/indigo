@@ -41,7 +41,7 @@ fn main() {
     let mut opts = Options::new();
 
     opts.optflagopt("g", "group", "path to group file", "PATH_TO_GROUP_FILE");
-    opts.optflagopt("n", "name", "path to names file", "PATH_TO_NAMES_FImmLE");
+    opts.optflagopt("n", "name", "path to names file", "PATH_TO_NAMES_FILE");
 
     match get_args(env::args().collect()) {
         Ok(parameters) => {

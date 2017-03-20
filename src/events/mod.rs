@@ -35,7 +35,8 @@ impl <'a> VectorStream<'a> {
     pub fn get_next(&mut self) -> Option<Vec<u32>> {
         //self.try_get().ok()
         match self.try_get() {
-            Err(_) => {
+            Err(e) => {
+                println!("{:?}", e);
                 None
             },
             Ok(d) => Some(d)

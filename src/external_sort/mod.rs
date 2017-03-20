@@ -1,5 +1,5 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
+//#![allow(dead_code)]
+//#![allow(unused_imports)]
 
 use std::cmp::Ordering;
 use std::io::{Write, Read, Error};
@@ -79,14 +79,12 @@ impl <'a, I> FileIterator<'a, I> {
 }
 
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::fmt::Debug;
-// iterating over open files seems dangerous maybe? if the iterator is unspooled into a collection
-// this could get messy.
+
 impl <'a, I> Iterator for FileIterator<'a, I> where I: Serialize + Debug {
     type Item = PathBuf; // path to file. it could just be string, but let's wrap it to make it more semantic
     fn next(&mut self) -> Option<Self::Item> {
-        use std::io::Write;
         let mut chunk = self.inner
             .by_ref()
             .take(self.options.chunk_size)
@@ -100,7 +98,6 @@ impl <'a, I> Iterator for FileIterator<'a, I> where I: Serialize + Debug {
             // writing should probably be done in a sink thread
 
             for value in chunk {
-//                println!("writing to {} [{:?}]", self.num, value);
                 value.serialize(&mut fd).unwrap();
             }
             self.num += 1;
@@ -118,9 +115,7 @@ impl <E> ExternalSort<E> where E: Clone + Serialize + Deserialize + Debug + 'sta
     pub fn new<F>(to_sort: Box<Iterator<Item=E>>, options: SortOptions, chunk_sort: F)
         -> ExternalSort<E>
         where F: Fn(&E, &E) -> Ordering + 'static {
-        use std::io::{BufRead, BufReader};
-        use std::io::Lines;
-
+        use std::io::BufReader;
         let sorted_chunks = {
             let paths = FileIterator::new(to_sort, options, &chunk_sort);
             paths.map(|file| {
@@ -227,5 +222,32 @@ impl Serialize for u32 {
         let b3 = ((self >> 8u32) & 0xffu32) as u8;
         let b4 = (self & 0xffu32) as u8;
         writer.write_all(&[b1, b2, b3, b4]).map(|_| 4)
+    }
+}
+
+pub fn run_me() {
+
+    use std::io::{BufRead, BufReader};
+//    use std::fs::Lines;
+
+    let r = BufReader::new(File::open("/tmp/numbers").unwrap()).lines();
+
+//    let boxed_seq: Box<Iterator<Item=u32>> = Box::new(r.map(|line| line.unwrap().parse::<u32>().unwrap()));
+
+    let boxed_seq: Box<Iterator<Item=u32>> = Box::new(0..1000);
+
+    use std::fs;
+
+    fs::create_dir_all("/tmp/r-sort/ns-1").unwrap();
+
+    let options = SortOptions {
+        directory: "/tmp/r-sort/ns-1/".to_string(),
+        chunk_size: 100
+    };
+
+    let es = ExternalSort::new(boxed_seq, options, |a, b| Ordering::Equal);
+
+    for i in es {
+        println!("{}", i);
     }
 }

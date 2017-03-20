@@ -3,24 +3,9 @@
 
 extern crate indigo;
 
-use indigo::external_sort::{SortOptions, ExternalSort};
+use indigo::external_sort::{SortOptions, ExternalSort, run_me};
 use std::cmp::Ordering;
 
 fn main () {
-    let boxed_seq: Box<Iterator<Item=u32>> = Box::new(0..1000);
-
-    use std::fs;
-
-    fs::create_dir_all("/tmp/r-sort/ns-1").unwrap();
-
-    let options = SortOptions {
-        directory: "/tmp/r-sort/ns-1/".to_string(),
-        chunk_size: 100
-    };
-
-    let es = ExternalSort::new(boxed_seq, options, |a, b| Ordering::Equal);
-
-    for i in es {
-        println!("{}", i);
-    }
+    run_me();
 }
